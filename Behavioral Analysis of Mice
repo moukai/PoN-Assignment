@@ -1,0 +1,37 @@
+library(tidyverse)
+library(ggplot2)
+#C57BL/6 Mice, Simple WM, Different temperature, PM5
+s1d1pm5 <- read.csv("/Users/moukaii/Desktop/workshopCSVfiles/explorationdata/strain1con1Tc.csv")
+ggplot(s1d1pm5, aes(Day, PMValue, group=Temperature, col=Temperature)) +
+  geom_errorbar(aes(ymin=PMValue-1.96*se, ymax=PMValue+1.96*se), width=0.1, colour="Black") +
+  geom_line() +
+  geom_point(size=3,shape=21, fill="white") +
+  ylab("% of Distance in Target Platform Quadrant") +
+  ggtitle("C57BL/6 Mice") +
+  theme(legend.justification=c(1,0),
+        legend.position=c(1,0)) +
+  theme(plot.title=element_text(hjust=0.5)) +
+  scale_colour_hue(name="Temperature(°C)",
+                   breaks=c("18'", "26'"),
+                   labels=c("18 on TD, 22 on RD", "26 on TD, 22 on RD"),
+                   l=40) +
+  geom_vline(xintercept=5.5, col="Red")
+
+#Two way Repeated Measures ANOVA: Inner Group, Day. Inter Group, Temperature, PM5
+library(rstatix)
+anova5.1 <- read.csv("/Users/moukaii/Desktop/workshopCSVfiles/explorationdata/strain1con1TcforANOVA.csv")
+anova5.1 %>%
+  group_by(Temperature, Day) %>%
+  shapiro_test(PMValue)
+fit5.1 <- aov(PMValue ~ Day*Temperature + Error(Mouse), data=anova5.1)
+summary(fit5.1)
+
+# Mixed Effect Model
+library(lme4)
+library(lmerTest)
+library(caret)
+WM_Overall <- read.csv("/Users/moukaii/Desktop/workshopCSVfiles/explorationdata/Mixed_Effect_Model.csv")
+PM8_BCMod <- BoxCoxTrans(WM_Overall$PM8)
+WM_Overall <- cbind(WM_Overall, PM8_bc=predict(PM8_BCMod, WM_Overall$PM8))
+mixed.WM <- lmer(PM8_bc ~ Strain + Temperature + Condition + (1|Mouse) + (1|Day/Trial), data=WM_Overall)
+summary(mixed.WM)
